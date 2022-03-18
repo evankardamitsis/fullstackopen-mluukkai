@@ -1,0 +1,13 @@
+note over browser:
+button on the form is clicked
+and user input is submitted on the server
+end note
+
+browser->server: HTTP POST https://studies.cs.helsinki.fi/exampleapp/new_note_spa
+server->browser: Status 201 created
+
+note over server:
+there is no redirect
+no more HTTP requests
+and no page reload
+end note
