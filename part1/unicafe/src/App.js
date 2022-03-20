@@ -8,14 +8,23 @@ const Button = (props) => {
 }
 
 //Statistic Line Component
-const StatisticLine = (props) => {
+const StatisticLine = ({ text, value }) => {
+  if (text === 'positive') {
+    return (
+      <tr>
+        <td>{text}</td>
+        <td>{value}</td>
+      </tr>
+      )
+  }
   return (
-    <>
-      <td>{props.text}</td>
-      <td>{props.value}</td>
-    </>   
+    <tr>
+      <td>{text}</td>
+      <td>{value}</td>
+    </tr>
   )
 }
+
 
 //Statistics Component
 const Statistics = (props) => {
