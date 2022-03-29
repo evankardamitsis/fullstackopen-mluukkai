@@ -6,9 +6,9 @@ const Persons = ({persons, deletePerson }) => {
     return (
         <div>
             <ul>
-                {persons.map(person =>
-                    <Person key={person.name} person={person} deletePerson={deletePerson} />
-                    )}
+            {persons.map((person, i) =>
+          <Person key={i} person={person} deletePerson={deletePerson} />
+        )}
             </ul>
         </div>
     )
