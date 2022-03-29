@@ -20,8 +20,6 @@ useEffect(() => {
     .then(initialPersons => {
       setPersons(initialPersons)
     })
-    .catch(error =>
-      console.log(error))
   }, [])
 
   
