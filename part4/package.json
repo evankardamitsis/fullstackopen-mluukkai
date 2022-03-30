@@ -4,9 +4,11 @@
   "description": "Blog List exercise app",
   "main": "app.js",
   "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Vkar90",
+  "author": "Vkar90, kardamitsis.e@belowthefold.gr",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.19.2",
