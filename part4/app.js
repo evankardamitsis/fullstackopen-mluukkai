@@ -1,34 +1,41 @@
-const http = require('http')
-const express = require('express')
-const app = express()
-const bodyParser = require('body-parser')
-const morgan = require('morgan')
-const cors = require('cors')
-const mongoose = require('mongoose')
-const logger = require('./utils/logger')
-const config = require('./utils/config')
-const blogsRouter = require('./controllers/blogs')
-const middleware = require('./utils/middleware')
-const usersRouter = require('./controllers/users')
+const express = require("express");
+const cors = require("cors");
+const config = require("./utils/config");
+const mongoose = require("mongoose");
+const blogsRouter = require("./controllers/blogs");
+const usersRouter = require("./controllers/users");
+const loginRouter = require("./controllers/login");
+const tokenExtractor = require("./utils/auth").tokenExtractor;
+const errorHandler = require("./utils/error");
 
-logger.info('connecting to', config.MONGODB_URI)
+const app = express();
 
-mongoose.connect(config.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose
+  .connect(config.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  })
   .then(() => {
-    logger.info('connected to MongoDB')
+    console.log("connected to MongoDB");
   })
   .catch((error) => {
-    logger.error('error connecting to MongoDB:', error.message)
-  })
+    console.log("error connecting to mongodb", error.message);
+  });
 
-morgan.token('body', function (req) { return JSON.stringify(req.body) })
+app.use(cors());
+app.use(express.json());
 
-app.use(bodyParser.json())
-app.use(cors())
-app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
+app.use(tokenExtractor);
 
-app.use('/api/blogs', blogsRouter)
-app.use('/api/users', usersRouter)
-app.use(middleware.errorHandler)
+app.use("/api/users", usersRouter);
+app.use("/api/login", loginRouter);
+app.use("/api/blogs", blogsRouter);
 
-module.exports = app
+if (process.env.NODE_ENV === 'test') {
+  const resetRouter = require('./controllers/reset');
+  app.use("/api/testing", resetRouter);
+}
+
+app.use(errorHandler);
+
+module.exports = app;
