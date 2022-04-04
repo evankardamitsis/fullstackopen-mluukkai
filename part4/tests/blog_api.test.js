@@ -1,145 +1,278 @@
-const mongoose = require("mongoose");
-const supertest = require("supertest");
-const Blog = require("../models/blog");
-const User = require("../models/user");
-const app = require("../app");
-
-const api = supertest(app);
-
-const initialBlogs = [
-  {
-    title: "Testing with Jest",
-    author: "Me Myself",
-    url: "https://www.google.gr",
-    likes: 12,
-  },
-  {
-    title: "Testing is Cool",
-    author: "Jest Industries",
-    url: "https://www.google.com",
-    likes: 9,
-  },
-];
-
-const user = {
-  name: "Evan Kardamitsis",
-  username: "evan",
-  password: "test",
-};
-
-beforeAll(async () => {
-  await api.post("/api/users").send(user);
-});
+const mongoose = require('mongoose')
+const helper = require('./test_helper')
+const supertest = require('supertest')
+const app = require('../app')
+const api = supertest(app)
+const Blog = require('../models/blog')
+const User = require('../models/user')
 
 beforeEach(async () => {
-  await Blog.deleteMany({});
-  const user = await User.findOne({ username: "evan" });
-  const blogObjects = initialBlogs.map(
-    (blogItem) => new Blog({ ...blogItem, user: user.id })
-  );
-  const blogPromises = blogObjects.map((blogObject) => blogObject.save());
-  await Promise.all(blogPromises);
-});
+  // Create a root user
+  await User.deleteMany({})
 
-test("blogs are returned as json", async () => {
-  await api
-    .get("/api/blogs")
-    .expect(200)
-    .expect("Content-Type", /application\/json/);
-});
+  // Create blogs without user
+  await Blog.deleteMany({})
+  const noteObjects = helper.initialBlogs.map(blog => new Blog(blog))
+  const promiseArray = noteObjects.map(blog => blog.save())
+  await Promise.all(promiseArray)
+})
 
-test("correct number of blogs are returned", async () => {
-  const response = await api.get("/api/blogs");
-  expect(response.body).toHaveLength(initialBlogs.length);
-});
+describe('Get blog information', () => {
+  let headers
 
-test("unique identifier of blog is defined", async () => {
-  const response = await api.get("/api/blogs");
-  expect(response.body[0].id).toBeDefined();
-});
+  beforeEach(async () => {
+    const newUser = {
+      username: 'root',
+      name: 'root',
+      password: 'password',
+    }
 
-test("create a valid blog successfully", async () => {
-  const loggedInUser = await api
-    .post("/api/login")
-    .send({ username: user.username, password: user.password });
-  const userToken = loggedInUser.body.token;
+    await api
+      .post('/api/users')
+      .send(newUser)
 
-  const blog = {
-    title: "For what is worth",
-    author: "Javascript Mastery",
-    url: "https://www.javascriptmastery.com/",
-    likes: 100,
-  };
-  await api
-    .post("/api/blogs")
-    .send(blog)
-    .set("Authorization", `Bearer ${userToken}`)
-    .expect(201)
-    .expect("Content-Type", /application\/json/);
+    const result = await api
+      .post('/api/login')
+      .send(newUser)
 
-  const response = await api.get("/api/blogs");
-  const titles = response.body.map((r) => r.title);
+    headers = {
+      'Authorization': `bearer ${result.body.token}`
+    }
+  })
 
-  expect(response.body).toHaveLength(initialBlogs.length + 1);
-  expect(titles).toContain(blog.title);
-});
+  test('blogs are returned as json', async () => {
+    await api
+      .get('/api/blogs')
+      .expect(200)
+      .set(headers)
+      .expect('Content-Type', /application\/json/)
+  })
 
-test("401 Unauthorized if token is not provided for creating a blog", async () => {
-  const blog = {
-    title: "Testing is cool",
-    author: "Tim Robinson",
-    url: "https://www.robinson.com/blog/",
-  };
-  await api.post("/api/blogs").send(blog).expect(401);
-});
+  test('there are two blogs', async () => {
+    const response = await api
+                        .get('/api/blogs')
+                        .set(headers)
 
-// test('blogs default likes are zero', async () => {
-//   const newBlog = {
-//     author: 'root other blog',
-//     title: 'testtitle',
-//     url: 'www.myurl.com'
-//   }
+    expect(response.body).toHaveLength(helper.initialBlogs.length)
+  })
 
-//   const response = await api
-//     .post('/api/blogs')
-//     .send(newBlog)
-//     .expect(200)
-//     .expect('Content-Type', /application\/json/)
+  test('the first blog is about React patterns', async () => {
+    const response = await api
+                      .get('/api/blogs')
+                      .set(headers)
 
-//   expect(response.body.likes).toEqual(0)
-// })
+    const contents = response.body.map(r => r.title)
 
-test("delete a blog successfully", async () => {
-  const loggedInUser = await api
-    .post("/api/login")
-    .send({ username: user.username, password: user.password });
-  const userToken = loggedInUser.body.token;
-  const userId = loggedInUser.body.id;
+    expect(contents).toContain('React patterns')
+  })
 
-  const response = await api.get("/api/blogs");
-  const blog = response.body.filter(
-    (r) => r.user.id.toString() === userId.toString()
-  )[0];
-  await api
-    .delete(`/api/blogs/${blog.id}`)
-    .set("Authorization", `Bearer ${userToken}`)
-    .expect(204);
+  test('The unique identifier property of the blog posts is by default _id', async () => {
+    const blogs = await Blog.find({})
+    expect(blogs[0]._id).toBeDefined()
+  })
+})
 
-  const responseAfterDelete = await api.get("/api/blogs");
-  expect(responseAfterDelete.body).toHaveLength(initialBlogs.length - 1);
-});
+describe('Adding a new blog listing', () => {
+  let headers
 
-test("update likes in a blog post successfully", async () => {
-  const response = await api.get("/api/blogs");
-  const ids = response.body.map((r) => r.id);
-  const payload = { likes: 2 };
-  const updatedBlog = await api
-    .put(`/api/blogs/${ids[0]}`)
-    .send(payload)
-    .expect(200);
-  expect(updatedBlog.body.likes).toBe(2);
-});
+  beforeEach(async () => {
+    const newUser = {
+      username: 'root',
+      name: 'root',
+      password: 'password',
+    }
+
+    await api
+      .post('/api/users')
+      .send(newUser)
+
+    const result = await api
+      .post('/api/login')
+      .send(newUser)
+
+    headers = {
+      'Authorization': `bearer ${result.body.token}`
+    }
+  })
+
+  test('A valid blog can be added ', async () => {
+    const newBlog = {
+      title:"React Testing with Jest",
+      author:"Pluralsight",
+      url:"https://www.pluralsight.com/courses/testing-react-applications-jest?aid=7010a000002LUv2AAG&promo=&utm_source=non_branded&utm_medium=digital_paid_search_google&utm_campaign=XYZ_EMEA_Dynamic&utm_content=&cq_cmp=1576650371&gclid=CjwKCAjwrqqSBhBbEiwAlQeqGvazb-6VdOuZJtL7LDAPQL2K3osXl0-VmlSaxR8F0h4XpZTIAzfrexoCF1cQAvD_BwE",
+      likes:12
+    }
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(200)
+      .set(headers)
+      .expect('Content-Type', /application\/json/)
+
+    const blogsAtEnd = await helper.blogsInDb()
+    expect(blogsAtEnd).toHaveLength(helper.initialBlogs.length + 1)
+
+    const contents = blogsAtEnd.map(n => n.title)
+    expect(contents).toContain(
+      'React Testing with Jest'
+    )
+  })
+
+  test('If title and url are missing, respond with 400 bad request', async () => {
+    const newBlog = {
+      author:"Pluralsight",
+      likes:12
+    }
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .set(headers)
+      .expect(400)
+
+    const blogsAtEnd = await helper.blogsInDb()
+
+    expect(blogsAtEnd).toHaveLength(helper.initialBlogs.length)
+  })
+
+  test('If the likes property is missing, it will default to 0 ', async () => {
+    const newBlog = {
+      title:"Complete Next.js with React & Node",
+      author:"Filip Jerga",
+      url:"https://www.udemy.com/course/awesome-nextjs-with-react-and-node-amazing-portfolio-app/?utm_source=adwords&utm_medium=udemyads&utm_campaign=WebDevelopment_v.PROF_la.EN_cc.ROWMTA-A_ti.8322&utm_content=deal4584&utm_term=_._ag_77741651163_._ad_533999949994_._kw__._de_c_._dm__._pl__._ti_aud-564043582702%3Adsa-774930032609_._li_1007565_._pd__._&matchtype=&gclid=CjwKCAjwrqqSBhBbEiwAlQeqGlhjFlIt1wbJ1diuCayOWugnsNoK77yG48Sblh1xsUTw3by4tzPcvhoCXYcQAvD_BwE",
+    }
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .set(headers)
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+
+    const blogsAtEnd = await helper.blogsInDb()
+    const addedBlog = await blogsAtEnd.find(blog => blog.title === "Complete Next.js with React & Node")
+    expect(addedBlog.likes).toBe(0)
+  })
+})
+
+describe('Update a blog', () => {
+  let headers
+
+  beforeEach(async () => {
+    const newUser = {
+      username: 'root',
+      name: 'root',
+      password: 'password',
+    }
+
+    await api
+      .post('/api/users')
+      .send(newUser)
+
+    const result = await api
+      .post('/api/login')
+      .send(newUser)
+
+    headers = {
+      'Authorization': `bearer ${result.body.token}`
+    }
+  })
+
+  test('Successful blog update', async () => {
+
+    const newBlog = {
+      title:"A history of Rush",
+      author:"Alex Lifeson",
+      url:"https://www.rush.com/",
+      likes:12
+    }
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .set(headers)
+      .expect(200)
+
+    const allBlogs = await helper.blogsInDb()
+    const blogToUpdate = allBlogs.find(blog => blog.title === newBlog.title)
+
+    const updatedBlog = {
+      ...blogToUpdate,
+      likes: blogToUpdate.likes + 1
+    }
+
+    await api
+      .put(`/api/blogs/${blogToUpdate.id}`)
+      .send(updatedBlog)
+      .set(headers)
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+
+    const blogsAtEnd = await helper.blogsInDb()
+    expect(blogsAtEnd).toHaveLength(helper.initialBlogs.length + 1)
+    const foundBlog = blogsAtEnd.find(blog => blog.likes === 13)
+    expect(foundBlog.likes).toBe(13)
+  })
+})
+
+describe('Deleting a blog', () => {
+  let headers
+
+  beforeEach(async () => {
+    const newUser = {
+      username: 'root',
+      name: 'root',
+      password: 'password',
+    }
+
+    await api
+      .post('/api/users')
+      .send(newUser)
+
+    const result = await api
+      .post('/api/login')
+      .send(newUser)
+
+    headers = {
+      'Authorization': `bearer ${result.body.token}`
+    }
+  })
+
+  test('succeeds with status code 204 if id is valid', async () => {
+    const newBlog = {
+      title:"Test Blog",
+      author:"Nick Cave",
+      url:"http://www.google.com/",
+      likes:12
+    }
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .set(headers)
+      .expect(200)
+
+    const allBlogs = await helper.blogsInDb()
+    const blogToDelete = allBlogs.find(blog => blog.title === newBlog.title)
+
+    await api
+      .delete(`/api/blogs/${blogToDelete.id}`)
+      .set(headers)
+      .expect(204)
+
+    const blogsAtEnd = await helper.blogsInDb()
+
+    expect(blogsAtEnd).toHaveLength(
+      helper.initialBlogs.length
+    )
+
+    const contents = blogsAtEnd.map(r => r.title)
+
+    expect(contents).not.toContain(blogToDelete.title)
+  })
+})
 
 afterAll(() => {
-  mongoose.connection.close();
+  mongoose.connection.close()
 })
