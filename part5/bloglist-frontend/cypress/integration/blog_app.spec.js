@@ -1,53 +1,51 @@
-import { type } from '@testing-library/user-event/dist/types/utility'
-
 describe('Blog App', function() {
   beforeEach(function () {
-    cy.request('POST', 'http://localhost/3001/api/testing/reset')
+    cy.request('POST', 'http://localhost:3003/api/testing/reset')
     const user = {
       name: 'Evan Kardamitsis',
-      username: 'evanv',
+      username: 'evank',
       password: 'test'
     }
-    cy.request('POST', 'http://localhost/api/users', user)
-    cy.visit('http://localhost/3000')
+    cy.request('POST', 'http://localhost:3003/api/users', user)
+    cy.visit('http://localhost:3000')
   })
 
-  if('Login form is shown', function() {
+  it('Login form is shown', function() {
     cy.contains('username')
     cy.contains('password')
     cy.contains('login')
   })
 
-    describe('Login', function() {
-      it('succeeds with correct credentials', function() {
-        cy.contains('login')
-          .click()
-        cy.get('#username')
-          .type('evanv')
-        cy.get('#password')
-          .type('test')
-        cy.get('#login-button')
-          .click()
-        cy.contains('Evan Kardamitsis logged in')
-      })
-
-      it('login fails with wrong password', function() {
-        cy.contains('login')
-          .click()
-        cy.get('#username')
-          .type('evanv')
-        cy.get('#password')
-          .type('wrongpassword')
-        cy.get('#login-button')
-          .click()
-
-        cy.get('#error')
-          .should('contain', 'Wrong credentials')
-          .and('have.css', 'color', 'rgb(255, 0, 0)')
-
-        cy.get('html').should('not.contain','Evan Kardamitsis logged in' )
-      })
+  describe('Login', function() {
+    it('succeeds with correct credentials', function() {
+      cy.contains('login')
+        .click()
+      cy.get('#username')
+        .type('evank')
+      cy.get('#password')
+        .type('test')
+      cy.get('#login-button')
+        .click()
+      cy.contains('Evan Kardamitsis logged in')
     })
+
+    it('login fails with wrong password', function() {
+      cy.contains('login')
+        .click()
+      cy.get('#username')
+        .type('evank')
+      cy.get('#password')
+        .type('wrongpassword')
+      cy.get('#login-button')
+        .click()
+
+      cy.get('#error')
+        .should('contain', 'Wrong credentials')
+        .and('have.css', 'color', 'rgb(255, 0, 0)')
+
+      cy.get('html').should('not.contain','Evan Kardamitsis logged in' )
+    })
+  })
 
   describe('when logged in', function() {
     beforeEach(function () {
@@ -114,16 +112,16 @@ describe('Blog App', function() {
     })
   })
 
-  describe('Blogs ordered by the number of likes', function() {
+  describe('Blogs ordered by number of likes', function() {
     beforeEach(function() {
       cy.login({ username: 'evank', password: 'test' })
-      cy.createBlog({ author: 'Johnny Dee', title: 'test blog', url:'https://google.com/testblog' })
-      cy.createBlog({ author: 'Johnny Cee', title: 'test blog 2', url:'https://google.com/testblog2' })
-      cy.createBlog({ author: 'Johnny Gee', title: 'test blog 3', url:'https://google.com/testblog3' })
+      cy.createBlog({ author: 'John Doe', title: 'test1', url: 'http://example.com./test1' })
+      cy.createBlog({ author: 'John Doe', title: 'test2', url: 'http://example.com./test2' })
+      cy.createBlog({ author: 'Jane Doe', title: 'test3', url: 'http://example.com./test3' })
 
-      cy.contains('test blog').parent().as('blog1')
-      cy.contains('test blog 2').parent().as('blog2')
-      cy.contains('test blog 3').parent().as('blog3')
+      cy.contains('test1').parent().parent().as('blog1')
+      cy.contains('test2').parent().parent().as('blog2')
+      cy.contains('test3').parent().parent().as('blog3')
     })
 
     it('they are ordered by number of likes', function() {
