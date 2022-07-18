@@ -1,10 +1,16 @@
-import { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import About from "./components/About";
+import React, { useState } from "react";
 import Menu from "./components/Menu";
-import AnecdoteList from "./components/AnecdoteList";
-import CreateNew from "./components/CreateNew";
 import Footer from "./components/Footer";
+import About from "./components/About";
+import AnecdoteList from "./components/AnecdoteList";
+import Anecdote from "./components/Anecdote";
+import CreateNew from "./components/CreateNew";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useMatch,
+} from "react-router-dom";
 
 const App = () => {
   const [anecdotes, setAnecdotes] = useState([
@@ -24,32 +30,26 @@ const App = () => {
     },
   ]);
 
-  const [notification, setNotification] = useState("");
-
-  const addNew = (anecdote) => {
-    anecdote.id = Math.round(Math.random() * 10000);
-    setAnecdotes(anecdotes.concat(anecdote));
-  };
-
-  const anecdoteById = (id) => anecdotes.find((a) => a.id === id);
-
-  const vote = (id) => {
-    const anecdote = anecdoteById(id);
-
-    const voted = {
-      ...anecdote,
-      votes: anecdote.votes + 1,
-    };
-
-    setAnecdotes(anecdotes.map((a) => (a.id === id ? voted : a)));
-  };
+  const match = useMatch("/anecdotes/:id");
+  const anecdote = match
+    ? anecdotes.find((anecdote) => anecdote.id === Number(match.params.id))
+    : null;
 
   return (
-    <div>
+    <>
       <h1>Software anecdotes</h1>
       <Menu />
+      <Routes>
+        <Route
+          path="/anecdotes/:id"
+          element={<Anecdote anecdote={anecdote} />}
+        />
+        <Route path="/" element={<AnecdoteList />} />
+        <Route path="/create" element={<CreateNew />} />
+        <Route path="/about" element={<About />} />
+      </Routes>
       <Footer />
-    </div>
+    </>
   );
 };
 
