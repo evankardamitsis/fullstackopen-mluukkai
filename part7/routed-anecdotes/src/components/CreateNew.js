@@ -1,4 +1,4 @@
-import { useField } from "../hooks/index";
+import { useField } from "../hooks/useField";
 
 const CreateNew = (props) => {
   const { reset: resetContent, ...content } = useField("text");
@@ -13,6 +13,13 @@ const CreateNew = (props) => {
       info: info.value,
       votes: 0,
     });
+  };
+
+  const handleReset = (e) => {
+    e.preventDefault();
+    resetContent();
+    resetAuthor();
+    resetInfo();
   };
 
   return (
@@ -31,7 +38,8 @@ const CreateNew = (props) => {
           url for more info
           <input name="info" {...info} />
         </div>
-        <button onClick={handleSubmit}>create</button>
+        <button onClick={handleSubmit}>Create</button>
+        <button onClick={handleReset}>Reset</button>
       </form>
     </div>
   );
