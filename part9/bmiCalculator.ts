@@ -1,50 +1,47 @@
-const rls = require("readline-sync");
+type centimeters = number;
+type kilograms = number;
 
-interface Values {
-  value1: number;
-  value2: number;
+function calculateBmi(height: centimeters, weight: kilograms): string {
+  const bmi: number = weight / Math.pow(height / 100, 2);
+  let result = '';
+
+  if (bmi < 15) result = 'Very severely underweight';
+  if (bmi >= 15 && bmi < 16) result = 'Severely underweight';
+  if (bmi >= 16 && bmi < 18.5) result = 'Underweight';
+  if (bmi >= 18.5 && bmi < 25) result = 'Normal (healthy weight)';
+  if (bmi >= 25 && bmi < 30) result = 'Overweight';
+  if (bmi >= 30 && bmi < 35) result = 'Obese Class I (Moderately obese)';
+  if (bmi >= 35 && bmi < 40) result = 'Obese Class II (Severely obese)t';
+  if (bmi >= 40) result = 'Obese Class III (Very severely obese)';
+
+  return result;
 }
 
-const height = rls.question("Enter your height in cm: ");
-const weight = rls.question("Enter your weight in kg: ");
+export { calculateBmi };
 
-const parseInput = (height: string, weight: string): Values => {
-  if (Number(height) <= 0 || Number(weight) <= 0) {
-    throw new Error("Height and weight must be a positive value!");
-  }
-  if (!isNaN(Number(height)) && !isNaN(Number(weight))) {
+interface MultiplyValues {
+  height: centimeters;
+  weight: kilograms;
+}
+
+const parseArguments = (args: Array<string>): MultiplyValues => {
+  if (args.length < 4) throw new Error('Not enough arguments');
+  if (args.length > 4) throw new Error('Too many arguments');
+
+  if (!isNaN(Number(args[2])) && !isNaN(Number(args[3]))) {
     return {
-      value1: Number(height),
-      value2: Number(weight),
+      height: Number(args[2]),
+      weight: Number(args[3]),
     };
   } else {
-    throw new Error("Provided values were not numbers!");
+    throw new Error('Provided values were not numbers!');
   }
-};
-
-const calculateBmi = (height: number, weight: number): string => {
-  const bmi = weight / (height / 100) ** 2;
-  console.log(`BMI: ${Math.round((bmi + Number.EPSILON) * 100) / 100}`);
-
-  if (bmi < 18.5) {
-    return "Underweight";
-  }
-  if (bmi < 25) {
-    return "Normal (healthy weight)";
-  }
-  if (bmi < 30) {
-    return "Overweight";
-  }
-  return "Obese";
 };
 
 try {
-  const { value1, value2 } = parseInput(height, weight);
-  console.log(calculateBmi(value1, value2));
-} catch (error: unknown) {
-  let errorMessage = "Something bad happened.";
-  if (error instanceof Error) {
-    errorMessage += " Error: " + error.message;
-  }
-  console.log(errorMessage);
+  const { height, weight } = parseArguments(process.argv);
+  console.log(calculateBmi(height, weight));
+} catch (error) {
+  if (error instanceof Error)
+    console.log('Error, something bad happened, message: ', error.message);
 }
