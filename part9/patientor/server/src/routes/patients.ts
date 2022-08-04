@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import patientsService from '../services/patients';
-import { toNewPatient } from '../utils';
-import { NewPatient } from '../types';
+import { toNewPatient, toNewEntry } from '../utils';
+import { NewPatient, Entry } from '../types';
 
 const router = express.Router();
 
@@ -16,6 +16,19 @@ router.get('/:id', (req: Request, res: Response) => {
   const patient = patientsService.getPatient(id);
 
   res.send(patient);
+});
+
+router.post('/:id/entries', (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const newEntry: Entry = toNewEntry(req.body);
+
+    const addedEntry = patientsService.addEntry(id, newEntry);
+    res.json(addedEntry);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Undefined error';
+    res.status(400).send(errorMessage);
+  }
 });
 
 router.post('/', (req: Request, res: Response) => {
